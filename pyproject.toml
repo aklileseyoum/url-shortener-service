@@ -1,7 +1,7 @@
 [project]
 name = "url-shortener-service"
 version = "0.1.0"
-description = ""
+description = "A FastAPI microservice for shortening URLs, with PostgreSQL storage and Docker Compose deployment."
 authors = [
     {name = "aklileseyoum",email = "aklileseyoum294@gmail.com"}
 ]
