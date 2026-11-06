@@ -12,6 +12,7 @@ repos:
         language: unsupported
         types: [python]
       - id: mypy
+        args: [--explicit-package-bases]
         name: mypy
         entry: poetry run mypy src
         language: unsupported
