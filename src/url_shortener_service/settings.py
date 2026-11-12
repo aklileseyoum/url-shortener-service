@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    environment: str = "development"
     model_config = SettingsConfigDict(env_file=".env")
 
     postgres_host: str = "localhost"

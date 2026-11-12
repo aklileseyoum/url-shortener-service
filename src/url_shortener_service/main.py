@@ -1,78 +1,35 @@
-import secrets
-import string
+import time
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse, RedirectResponse
-from pydantic import HttpUrl
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
-from src.url_shortener_service.db import get_connection, release_connection
-
-app = FastAPI()
+from src.url_shortener_service.routers import urls
+from src.url_shortener_service.settings import settings
 
 
-def generate_code():
-    alphabet = string.ascii_uppercase + string.ascii_lowercase + string.digits
-    return "".join(secrets.choice(alphabet) for _ in range(6))
+def create_app() -> FastAPI:
+    app = FastAPI(title="URL Shortener")
+    app.include_router(urls.router, tags=["urls"])
+
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next):
+        start_time = time.time()
+        response = await call_next(request)
+        duration = time.time() - start_time
+        print(
+            f"{request.method} {request.url.path} - {response.status_code} - {duration:.3f}s"
+        )
+        return response
+
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        if settings.environment == "development":
+            detail = str(exc)
+        else:
+            detail = "An unexpected error occurred."
+        return JSONResponse(status_code=500, content={"detail": detail})
+
+    return app
 
 
-def save_to_db(short_code: str, url: str) -> bool:
-    conn = get_connection()
-
-    try:
-        with conn, conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO url_table (short_code, url)" " VALUES (%s, %s)",
-                (short_code, url),
-            )
-            return True
-
-    except Exception as e:  # noqa: BLE001
-        print(f"save_to_db failed: {e}")
-        return False
-
-    finally:
-        release_connection(conn)
-
-
-def lookup_short_code(short_code: str) -> str | None:
-    conn = get_connection()
-    try:
-        with conn, conn.cursor() as cur:
-            cur.execute(
-                "SELECT url FROM url_table WHERE short_code = %s", (short_code,)
-            )
-            url = cur.fetchone()
-
-            if url is None:
-                return None
-
-            return url[0]
-
-    except Exception as e:  # noqa: BLE001
-        print(f"failed to fetch: {e}")
-        return None
-
-    finally:
-        release_connection(conn)
-
-
-@app.post("/api/urls", status_code=201)
-async def shorten_url(url: HttpUrl):
-    for _ in range(3):
-        short_code = generate_code()
-
-        if not save_to_db(short_code, str(url)):
-            raise HTTPException(status_code=500, detail="Could not save URL")
-
-    return JSONResponse(
-        content={"short_code": short_code, "message": "It was successful"}
-    )
-
-
-@app.get("/{short_code}")
-async def access_url(short_code: str):
-    url = lookup_short_code(short_code)
-    if url is None:
-        raise HTTPException(status_code=404, detail="Short code not found")
-
-    return RedirectResponse(url=url)
+app = create_app()
