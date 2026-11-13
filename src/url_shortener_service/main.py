@@ -3,13 +3,15 @@ import time
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from src.url_shortener_service.routers import urls
+from src.url_shortener_service.routers import tags, urls, users
 from src.url_shortener_service.settings import settings
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="URL Shortener")
     app.include_router(urls.router, tags=["urls"])
+    app.include_router(users.router, tags=["users"])
+    app.include_router(tags.router, tags=["tags"])
 
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
