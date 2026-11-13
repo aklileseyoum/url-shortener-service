@@ -34,3 +34,6 @@ dev = [
 
 [tool.fastapi]
 entrypoint = "src.url_shortener_service.main:app"
+
+[tool.ruff.lint]
+ignore = ["B008"]
