@@ -9,19 +9,6 @@ from src.url_shortener_service.models import URL, Click, Tag, User
 
 class UrlShortenerService:
 
-    def register_user(self, email: str, db) -> User:
-        user = User(email=email)
-        db.add(user)
-        try:
-            db.commit()
-
-        except IntegrityError:
-            db.rollback()
-            raise ValueError("Email already registered")
-
-        db.refresh(user)
-        return user
-
     def save_to_db(
         self, email: str, url: str, db, custom_alias: str | None = None
     ) -> URL:
