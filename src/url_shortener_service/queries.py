@@ -31,3 +31,10 @@ def popular_urls(db):
 def clicks_by_country(db):
     stmt = select(Click.country, func.count(Click.id)).group_by(Click.country)
     return db.execute(stmt).all()
+
+
+def count_active_urls_for_user(user_id: int, db) -> int:
+    stmt = select(func.count(URL.id)).where(
+        URL.owner_id == user_id, URL.is_active == True
+    )
+    return db.execute(stmt).scalar_one()

@@ -15,3 +15,8 @@ class RegisterRequest(BaseModel):
         if not any(c.isdigit() for c in value):
             raise ValueError("Password must contain a number")
         return value
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
