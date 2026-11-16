@@ -37,5 +37,8 @@ dev = [
 [tool.fastapi]
 entrypoint = "src.url_shortener_service.main:app"
 
+[tool.mypy]
+explicit_package_bases = true
+
 [tool.ruff.lint]
 ignore = ["B008"]
