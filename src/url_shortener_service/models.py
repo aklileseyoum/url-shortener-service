@@ -35,6 +35,7 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     email: Mapped[str] = mapped_column(String, unique=True)
+    hashed_password: Mapped[str] = mapped_column(String)
     is_premium: Mapped[bool] = mapped_column(Boolean, default=False)
     tier: Mapped[Tier] = mapped_column(Enum(Tier), default=Tier.FREE)
     urls: Mapped[list[URL]] = relationship(back_populates="owner")
