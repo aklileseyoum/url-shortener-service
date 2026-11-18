@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import Date, cast, func, select
 from sqlalchemy.orm import joinedload, selectinload
 
 from src.url_shortener_service.models import URL, Click
@@ -38,3 +38,24 @@ def count_active_urls_for_user(user_id: int, db) -> int:
         URL.owner_id == user_id, URL.is_active == True
     )
     return db.execute(stmt).scalar_one()
+
+
+def clicks_over_time(short_code: str, db) -> list:
+    stmt = (
+        select(cast(Click.clicked_at, Date), func.count(Click.id))
+        .join(URL, Click.url_id == URL.id)
+        .where((URL.short_code == short_code) | (URL.custom_alias == short_code))
+        .group_by(cast(Click.clicked_at, Date))
+        .order_by(cast(Click.clicked_at, Date))
+    )
+    return db.execute(stmt).all()
+
+
+def clicks_by_country_for_url(short_code: str, db) -> list:
+    stmt = (
+        select(Click.country, func.count(Click.id))
+        .join(URL, Click.url_id == URL.id)
+        .where((URL.short_code == short_code) | (URL.custom_alias == short_code))
+        .group_by(Click.country)
+    )
+    return db.execute(stmt).all()

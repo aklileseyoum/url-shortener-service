@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from pydantic import HttpUrl
 
 from src.url_shortener_service.auth import CurrentUser
 from src.url_shortener_service.database import get_db
-from src.url_shortener_service.queries import count_active_urls_for_user
+from src.url_shortener_service.queries import (
+    clicks_by_country_for_url,
+    clicks_over_time,
+    count_active_urls_for_user,
+)
 from src.url_shortener_service.responses import SuccessResponse
 from src.url_shortener_service.services.url_services import (
     UrlShortenerService,
@@ -52,11 +56,13 @@ async def shorten_url(
 
 @router.get("/{short_code}")
 async def access_url(
+    request: Request,
     short_code: str,
     service: UrlShortenerService = Depends(get_url_service),
     db=Depends(get_db),
 ):
-    url = service.record_click(short_code, db)
+    ip_address = request.client.host if request.client else None
+    url = service.record_click(short_code, db, ip_address)
     if url is None:
         raise HTTPException(
             status_code=404, detail="Short code or custom alias not found"
@@ -151,5 +157,25 @@ async def get_url_details(
             "custom_alias": url.custom_alias,
             "click_count": url.click_count,
             "tags": [t.name for t in url.tags],
+        },
+    )
+
+
+@router.get("/api/v1/analytics/{short_code}")
+async def get_analytics(short_code: str, current_user: CurrentUser, db=Depends(get_db)):
+    if not current_user.is_premium:
+        raise HTTPException(status_code=403, detail="Analytics is a Premium feature")
+
+    time_series = clicks_over_time(short_code, db)
+    by_country = clicks_by_country_for_url(short_code, db)
+
+    return SuccessResponse(
+        status_code=200,
+        message="Analytics retrieved",
+        data={
+            "clicks_over_time": [{"date": str(d), "count": c} for d, c in time_series],
+            "clicks_by_country": [
+                {"country": country, "count": c} for country, c in by_country
+            ],
         },
     )

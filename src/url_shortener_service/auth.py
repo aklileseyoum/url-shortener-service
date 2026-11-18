@@ -49,6 +49,13 @@ def verify_access_token(token: str) -> dict[str, Any]:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
+def create_refresh_token(user_id: int) -> str:
+    to_encode: dict[str, Any] = {"user_id": user_id}
+    expire = datetime.now(UTC) + timedelta(days=7)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, settings.secret_key, algorithm="HS256")
+
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security), db=Depends(get_db)
 ) -> User:

@@ -1,6 +1,7 @@
 import secrets
 import string
 
+import httpx
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
@@ -14,12 +15,24 @@ class UrlShortenerService:
     ) -> URL:
         for _ in range(3):
             short_code = generate_code()
+
+            if custom_alias:
+                existing = db.execute(
+                    select(URL).where(
+                        (URL.short_code == custom_alias)
+                        | (URL.custom_alias == custom_alias)
+                    )
+                ).scalar_one_or_none()
+                if existing is not None:
+                    raise ValueError("That alias is already taken")
+
             new_url = URL(
                 original_url=url,
                 short_code=short_code,
                 custom_alias=custom_alias,
                 owner_id=user_id,
             )
+
             db.add(new_url)
             try:
                 db.commit()
@@ -76,7 +89,7 @@ class UrlShortenerService:
             raise ValueError("URL not found")
         return url
 
-    def record_click(self, short_code: str, db) -> str | None:
+    def record_click(self, short_code: str, db, ip_address: str | None) -> str | None:
         url = db.execute(
             select(URL).where(
                 (URL.short_code == short_code) | (URL.custom_alias == short_code)
@@ -84,8 +97,14 @@ class UrlShortenerService:
         ).scalar_one_or_none()
         if url is None:
             return None
+
+        location = (
+            get_location_from_ip(ip_address)
+            if ip_address
+            else {"country": None, "city": None}
+        )
         url.click_count += 1
-        click = Click(url_id=url.id)
+        click = Click(url_id=url.id, country=location["country"], city=location["city"])
         db.add(click)
         db.commit()
         return url.original_url
@@ -94,6 +113,15 @@ class UrlShortenerService:
 def generate_code():
     alphabet = string.ascii_uppercase + string.ascii_lowercase + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(6))
+
+
+def get_location_from_ip(ip_address: str) -> dict[str, str | None]:
+    try:
+        response = httpx.get(f"http://ip-api.com/json/{ip_address}", timeout=3.0)
+        data = response.json()
+        return {"country": data.get("country"), "city": data.get("city")}
+    except Exception:  # noqa: BLE001
+        return {"country": None, "city": None}
 
 
 def get_url_service() -> UrlShortenerService:
