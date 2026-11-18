@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     postgres_user: str
     postgres_password: str
     postgres_db: str
+    secret_key: str
 
 
 settings = Settings()  # type: ignore[call-arg]
