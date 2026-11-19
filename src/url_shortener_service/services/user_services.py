@@ -1,5 +1,8 @@
+from fastapi.concurrency import run_in_threadpool
 from pwdlib import PasswordHash
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.url_shortener_service.auth import (
     create_access_token,
@@ -27,16 +30,23 @@ class UserService:
         db.refresh(user)
         return user
 
-    def login_user(self, email: str, password: str, db) -> tuple[str, str]:
-        user = db.query(User).filter(User.email == email).first()
-        if user is None or not password_hasher.verify(password, user.hashed_password):
+    async def login_user(
+        self, email: str, password: str, db: AsyncSession
+    ) -> tuple[str, str]:
+        user = (
+            await db.execute(select(User).where(User.email == email))
+        ).scalar_one_or_none()
+
+        if user is None or not await run_in_threadpool(
+            password_hasher.verify, password, user.hashed_password
+        ):
             raise ValueError("Incorrect email or password")
 
         access_token = create_access_token(user.id)
         refresh_token = create_refresh_token(user.id)
 
         db.add(RefreshToken(token=refresh_token, user_id=user.id))
-        db.commit()
+        await db.commit()
 
         return access_token, refresh_token
 

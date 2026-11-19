@@ -1,9 +1,12 @@
 import secrets
 import string
+from collections.abc import Sequence
 
 import httpx
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.url_shortener_service.models import URL, Click
 
@@ -75,8 +78,11 @@ class UrlShortenerService:
         db.delete(url)
         db.commit()
 
-    def list_my_urls(self, user_id: int, db) -> list[URL]:
-        return db.execute(select(URL).where(URL.owner_id == user_id)).scalars().all()
+    async def list_my_urls(self, user_id: int, db: AsyncSession) -> Sequence[URL]:
+        result = await db.execute(
+            select(URL).where(URL.owner_id == user_id).options(selectinload(URL.tags))
+        )
+        return result.scalars().all()
 
     def get_url_details(self, user_id: int, short_code: str, db) -> URL:
         url = db.execute(

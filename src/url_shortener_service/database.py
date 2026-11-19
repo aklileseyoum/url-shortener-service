@@ -1,5 +1,7 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from collections.abc import AsyncIterator
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
 
 from src.url_shortener_service.settings import settings
 
@@ -18,14 +20,10 @@ LOCAL_DATABASE_URL = (
     f"@{settings.postgres_host_local}:{settings.postgres_port}/{settings.postgres_db}"
 )
 
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(bind=engine)
+engine = create_async_engine(DATABASE_URL)
+SessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 
-def get_db():
-    db = SessionLocal()
-    try:
+async def get_db() -> AsyncIterator[AsyncSession]:
+    async with SessionLocal() as db:
         yield db
-
-    finally:
-        db.close()

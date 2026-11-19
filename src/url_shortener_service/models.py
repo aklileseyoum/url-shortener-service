@@ -1,5 +1,5 @@
 import enum
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
@@ -94,4 +94,4 @@ class RefreshToken(Base):
     token: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     is_revoked: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

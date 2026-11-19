@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.url_shortener_service.database import get_db
 from src.url_shortener_service.rate_limit import limiter
@@ -35,16 +36,16 @@ def register_user(
 
 @router.post("/api/login")
 @limiter.limit("3/minute")
-def login(
+async def login(
     request: Request,
     data: LoginRequest,
     user_service: UserService = Depends(get_user_service),
-    db=Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     try:
         access_token: str
         refresh_token: str
-        access_token, refresh_token = user_service.login_user(
+        access_token, refresh_token = await user_service.login_user(
             data.email, data.password, db
         )
     except ValueError as e:

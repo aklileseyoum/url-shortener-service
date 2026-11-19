@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from pydantic import HttpUrl
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.url_shortener_service.auth import CurrentUser
 from src.url_shortener_service.database import get_db
@@ -116,10 +117,10 @@ async def delete_url(
 async def list_my_urls(
     current_user: CurrentUser,
     service: UrlShortenerService = Depends(get_url_service),
-    db=Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     try:
-        urls = service.list_my_urls(current_user.id, db)
+        urls = await service.list_my_urls(current_user.id, db)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return SuccessResponse(
