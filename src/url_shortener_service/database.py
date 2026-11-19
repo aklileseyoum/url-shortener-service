@@ -9,12 +9,12 @@ class Base(DeclarativeBase):
 
 
 DATABASE_URL = (
-    f"postgresql+psycopg2://{settings.postgres_user}:{settings.postgres_password}"
+    f"postgresql+asyncpg://{settings.postgres_user}:{settings.postgres_password}"
     f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
 )
 
 LOCAL_DATABASE_URL = (
-    f"postgresql+psycopg2://{settings.postgres_user}:{settings.postgres_password}"
+    f"postgresql+asyncpg://{settings.postgres_user}:{settings.postgres_password}"
     f"@{settings.postgres_host_local}:{settings.postgres_port}/{settings.postgres_db}"
 )
 
