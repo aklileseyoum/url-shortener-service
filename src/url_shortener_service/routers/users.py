@@ -18,13 +18,13 @@ router = APIRouter()
 
 
 @router.post("/api/register", status_code=201)
-def register_user(
+async def register_user(
     data: RegisterRequest,
     user_service: UserService = Depends(get_user_service),
-    db=Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     try:
-        user = user_service.register_user(data.email, data.password, db)
+        user = await user_service.register_user(data.email, data.password, db)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return SuccessResponse(
@@ -58,13 +58,13 @@ async def login(
 
 
 @router.post("/api/refresh")
-def refresh(
+async def refresh(
     data: RefreshRequest,
     user_service: UserService = Depends(get_user_service),
-    db=Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     try:
-        access_token, refresh_token = user_service.refresh_tokens(
+        access_token, refresh_token = await user_service.refresh_tokens(
             data.refresh_token, db
         )
     except ValueError as e:

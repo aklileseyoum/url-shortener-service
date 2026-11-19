@@ -16,18 +16,18 @@ password_hasher = PasswordHash.recommended()
 
 
 class UserService:
-    def register_user(self, email: str, password: str, db) -> User:
+    async def register_user(self, email: str, password: str, db: AsyncSession) -> User:
         hashed_password = hash_password(password)
         user = User(email=email, hashed_password=hashed_password)
         db.add(user)
         try:
-            db.commit()
+            await db.commit()
 
         except IntegrityError:
-            db.rollback()
+            await db.rollback()
             raise ValueError("Email already registered")
 
-        db.refresh(user)
+        await db.refresh(user)
         return user
 
     async def login_user(
@@ -50,15 +50,20 @@ class UserService:
 
         return access_token, refresh_token
 
-    def refresh_tokens(self, refresh_token: str, db) -> tuple[str, str]:
+    async def refresh_tokens(
+        self, refresh_token: str, db: AsyncSession
+    ) -> tuple[str, str]:
         payload = verify_access_token(refresh_token)
         user_id = payload.get("user_id")
         if user_id is None:
             raise ValueError("Invalid refresh token")
 
         stored = (
-            db.query(RefreshToken).filter(RefreshToken.token == refresh_token).first()
-        )
+            await db.execute(
+                select(RefreshToken).where(RefreshToken.token == refresh_token)
+            )
+        ).scalar_one_or_none()
+
         if stored is None or stored.is_revoked:
             raise ValueError("Refresh token is invalid or has been revoked")
 
@@ -67,7 +72,7 @@ class UserService:
         new_access_token: str = create_access_token(user_id)
         new_refresh_token: str = create_refresh_token(user_id)
         db.add(RefreshToken(token=new_refresh_token, user_id=user_id))
-        db.commit()
+        await db.commit()
 
         return new_access_token, new_refresh_token
 
