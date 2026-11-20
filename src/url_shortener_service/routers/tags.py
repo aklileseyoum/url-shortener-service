@@ -18,7 +18,7 @@ async def create_tag(
     db=Depends(get_db),
 ):
     try:
-        tag = service.create_tag(name, db)
+        tag = await service.create_tag(name, db)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return SuccessResponse(
@@ -37,7 +37,7 @@ async def attach_tag(
     db=Depends(get_db),
 ):
     try:
-        url = service.attach_tag(current_user.id, short_code, tag_name, db)
+        url = await service.attach_tag(current_user.id, short_code, tag_name, db)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return SuccessResponse(
