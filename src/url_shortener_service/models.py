@@ -61,7 +61,9 @@ class URL(Base):
         DateTime, default=datetime.utcnow, index=True
     )
     owner: Mapped[User] = relationship(back_populates="urls")
-    clicks: Mapped[list[Click]] = relationship(back_populates="url")
+    clicks: Mapped[list[Click]] = relationship(
+        back_populates="url", cascade="all, delete-orphan", passive_deletes=True
+    )
     tags: Mapped[list[Tag]] = relationship(secondary=url_tags, back_populates="urls")
 
 

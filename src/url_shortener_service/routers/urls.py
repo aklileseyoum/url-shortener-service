@@ -24,7 +24,7 @@ async def shorten_url(
     current_user: CurrentUser,
     url: HttpUrl,
     service: UrlShortenerService = Depends(get_url_service),
-    db=Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     custom_alias: str | None = None,
 ):
     if custom_alias and not current_user.is_premium:
@@ -34,14 +34,14 @@ async def shorten_url(
 
     if (
         not current_user.is_premium
-        and count_active_urls_for_user(current_user.id, db) >= 10
+        and await count_active_urls_for_user(current_user.id, db) >= 10
     ):
         raise HTTPException(
             status_code=403, detail="Free tier is limited to 10 active URLs"
         )
 
     try:
-        new_url = service.save_to_db(current_user.id, str(url), db, custom_alias)
+        new_url = await service.save_to_db(current_user.id, str(url), db, custom_alias)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return SuccessResponse(
@@ -60,10 +60,10 @@ async def access_url(
     request: Request,
     short_code: str,
     service: UrlShortenerService = Depends(get_url_service),
-    db=Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     ip_address = request.client.host if request.client else None
-    url = service.record_click(short_code, db, ip_address)
+    url = await service.record_click(short_code, db, ip_address)
     if url is None:
         raise HTTPException(
             status_code=404, detail="Short code or custom alias not found"
@@ -77,11 +77,13 @@ async def update_url(
     short_code: str,
     current_user: CurrentUser,
     new_original_url: str,
-    service=Depends(get_url_service),
-    db=Depends(get_db),
+    service: UrlShortenerService = Depends(get_url_service),
+    db: AsyncSession = Depends(get_db),
 ):
     try:
-        url = service.update_url(current_user.id, short_code, new_original_url, db)
+        url = await service.update_url(
+            current_user.id, short_code, new_original_url, db
+        )
     except PermissionError as e:
         raise HTTPException(403, str(e))
     except ValueError as e:
@@ -101,11 +103,11 @@ async def update_url(
 async def delete_url(
     short_code: str,
     current_user: CurrentUser,
-    service=Depends(get_url_service),
-    db=Depends(get_db),
+    service: UrlShortenerService = Depends(get_url_service),
+    db: AsyncSession = Depends(get_db),
 ):
     try:
-        service.delete_url(current_user.id, short_code, db)
+        await service.delete_url(current_user.id, short_code, db)
     except PermissionError as e:
         raise HTTPException(403, str(e))
     except ValueError as e:
@@ -143,10 +145,10 @@ async def get_url_details(
     short_code: str,
     current_user: CurrentUser,
     service: UrlShortenerService = Depends(get_url_service),
-    db=Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     try:
-        url = service.get_url_details(current_user.id, short_code, db)
+        url = await service.get_url_details(current_user.id, short_code, db)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return SuccessResponse(
@@ -163,12 +165,14 @@ async def get_url_details(
 
 
 @router.get("/api/v1/analytics/{short_code}")
-async def get_analytics(short_code: str, current_user: CurrentUser, db=Depends(get_db)):
+async def get_analytics(
+    short_code: str, current_user: CurrentUser, db: AsyncSession = Depends(get_db)
+):
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail="Analytics is a Premium feature")
 
-    time_series = clicks_over_time(short_code, db)
-    by_country = clicks_by_country_for_url(short_code, db)
+    time_series = await clicks_over_time(short_code, db)
+    by_country = await clicks_by_country_for_url(short_code, db)
 
     return SuccessResponse(
         status_code=200,
