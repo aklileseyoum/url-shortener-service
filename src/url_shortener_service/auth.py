@@ -10,6 +10,7 @@ from fastapi.security import (
 )
 from jwt import PyJWTError
 from pwdlib import PasswordHash
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.url_shortener_service.database import get_db
 from src.url_shortener_service.models import User
@@ -56,15 +57,16 @@ def create_refresh_token(user_id: int) -> str:
     return jwt.encode(to_encode, settings.secret_key, algorithm="HS256")
 
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security), db=Depends(get_db)
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     payload = verify_access_token(credentials.credentials)
     user_id = payload.get("user_id")
     if user_id is None:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    user = db.query(User).filter(User.id == user_id).first()
+    user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
     return user
