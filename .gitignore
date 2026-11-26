@@ -26,3 +26,6 @@ htmlcov/
 # Editor settings (optional)
 .vscode/
 .idea/
+
+# Profiler
+profile.out
