@@ -42,6 +42,17 @@ services:
       - "9090:9090"
     depends_on:
       - app
-      
+  
+  grafana:
+    image: grafana/grafana:11.6.0
+    container_name: url_shortener_grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
 volumes:
   pgdata:
+  grafana_data:
