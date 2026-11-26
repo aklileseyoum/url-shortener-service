@@ -7,7 +7,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from src.url_shortener_service.rate_limit import limiter
-from src.url_shortener_service.routers import tags, urls, users
+from src.url_shortener_service.routers import health, tags, urls, users
 from src.url_shortener_service.settings import settings
 
 
@@ -16,6 +16,7 @@ def create_app() -> FastAPI:
     Instrumentator().instrument(app).expose(app)
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+    app.include_router(health.router, tags=["health"])
     app.include_router(urls.router, tags=["urls"])
     app.include_router(users.router, tags=["users"])
     app.include_router(tags.router, tags=["tags"])
