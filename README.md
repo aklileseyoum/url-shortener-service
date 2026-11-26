@@ -163,6 +163,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
                    │  ├───────────────────────────┤ │      └──────────────┘
                    │  │ SQLAlchemy models + Alembic│ │
                    │  ├───────────────────────────┤ │
+                   │  │ SQLAlchemy models + Alembic│ │
+                   │  ├───────────────────────────┤ │
                    │  │ Global exception handler  │ │
                    │  └───────────────────────────┘ │
                    └───────────────────────────────┘
